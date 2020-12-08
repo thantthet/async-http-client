@@ -34,13 +34,15 @@ public extension HTTPClient.Configuration {
         /// Specifies Proxy server authorization.
         public var authorization: HTTPClient.Authorization?
 
+        public var tls: Bool
+
         /// Create proxy.
         ///
         /// - parameters:
         ///     - host: proxy server host.
         ///     - port: proxy server port.
-        public static func server(host: String, port: Int) -> Proxy {
-            return .init(host: host, port: port, authorization: nil)
+        public static func server(host: String, port: Int, tls: Bool = false) -> Proxy {
+            return .init(host: host, port: port, authorization: nil, tls: tls)
         }
 
         /// Create proxy.
@@ -49,8 +51,8 @@ public extension HTTPClient.Configuration {
         ///     - host: proxy server host.
         ///     - port: proxy server port.
         ///     - authorization: proxy server authorization.
-        public static func server(host: String, port: Int, authorization: HTTPClient.Authorization? = nil) -> Proxy {
-            return .init(host: host, port: port, authorization: authorization)
+        public static func server(host: String, port: Int, authorization: HTTPClient.Authorization? = nil, tls: Bool = false) -> Proxy {
+            return .init(host: host, port: port, authorization: authorization, tls: tls)
         }
     }
 }

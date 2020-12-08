@@ -58,13 +58,17 @@ extension ClientBootstrap {
         requiresTLS: Bool,
         configuration: HTTPClient.Configuration
     ) throws -> NIOClientTCPBootstrap {
-        // if there is a proxy don't create TLS provider as it will be added at a later point
-        if configuration.proxy != nil {
+        // if there is a non-secured proxy don't create TLS provider as it will be added at a later point
+        if configuration.proxy?.tls == false {
             return NIOClientTCPBootstrap(self, tls: NIOInsecureNoTLS())
         } else {
             let tlsConfiguration = configuration.tlsConfiguration ?? TLSConfiguration.forClient()
             let sslContext = try NIOSSLContext(configuration: tlsConfiguration)
-            let hostname = (!requiresTLS || host.isIPAddress || host.isEmpty) ? nil : host
+            var hostname = (!requiresTLS || host.isIPAddress || host.isEmpty) ? nil : host
+            // Use proxy server host name for tls when using a proxy server
+            if let proxy = configuration.proxy {
+                hostname = proxy.host
+            }
             let tlsProvider = try NIOSSLClientTLSProvider<ClientBootstrap>(context: sslContext, serverHostname: hostname)
             return NIOClientTCPBootstrap(self, tls: tlsProvider)
         }
@@ -83,8 +87,8 @@ extension NIOClientTCPBootstrap {
         #if canImport(Network)
             // if eventLoop is compatible with NIOTransportServices create a NIOTSConnectionBootstrap
             if #available(OSX 10.14, iOS 12.0, tvOS 12.0, watchOS 6.0, *), let tsBootstrap = NIOTSConnectionBootstrap(validatingGroup: eventLoop) {
-                // if there is a proxy don't create TLS provider as it will be added at a later point
-                if configuration.proxy != nil {
+                // if there is a non-secured proxy don't create TLS provider as it will be added at a later point
+                if configuration.proxy?.tls == false {
                     bootstrap = NIOClientTCPBootstrap(tsBootstrap, tls: NIOInsecureNoTLS())
                 } else {
                     // create NIOClientTCPBootstrap with NIOTS TLS provider
@@ -110,8 +114,8 @@ extension NIOClientTCPBootstrap {
             bootstrap = bootstrap.connectTimeout(timeout)
         }
 
-        // don't enable TLS if we have a proxy, this will be enabled later on
-        if requiresTLS, configuration.proxy == nil {
+        // don't enable TLS if not a secured proxy or not requiresTLS, this will be enabled later on
+        if (requiresTLS && configuration.proxy == nil) || configuration.proxy?.tls == true {
             return bootstrap.enableTLS()
         }
 
